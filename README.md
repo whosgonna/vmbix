@@ -1,4 +1,23 @@
-# VmBix [![Build Status](https://travis-ci.org/dav3860/vmbix.svg?branch=master)](https://travis-ci.org/dav3860/vmbix)
+# Notes on this fork
+
+This repo is a fork of [dav3860/vmbix](https://github.com/dav3860/vmbix) to update VmBix for [Zabbix 4.0](https://github.com/dav3860/vmbix/issues/54).  The failures of the current VmBix to work against Zabbix 4.0 is the use of the new header in 4.0.  Requests from Zabbix no longer end in a newline, so VmBix's attempts to use a readLine method fail - it's waiting for a delimiter that never comes.  Also, Zabbix 4.0 seems to require the header in the response, which will necessitate additional formatting there.
+
+I've implemeted this with only the ```about``` check so far, so that a complete strategy can be determined before refactoring a bunch of code.   As an explaination:
+
+In ```run()``` function: 
+
+I've added an additional output object called ```outputStream``` of the OutputStream data type.  This is because the PrintWriter type for the current output object stringifies the message to be sent. Because there is binary data in the new message header, this won't work.  Ultimately the existing ```out``` variable will need to be changed to this type.
+
+I've created a temporary function of ```getAbout2()```.  Currently all calls to ```run()``` will currently skip the dispatch method (```checkAllPatterns()```), and instead just call ```getAbout2```. This function is similar to the existing getAbout(), but rather than accepting the output object, emitting the data, and returning void, this method will just return the about information as a string.
+
+The new function ```makeZabbix4Packet(String message)``` will return a byte array that can be sent to the new OutputStream.
+
+The new function ```sendZabbix4Packet(byte[] packet, OutputStream out)``` will send the packet to the OutputStream.  It might make more sense to simply combine this function with ```makeZabbix4Packet```.
+
+
+Right now, I'm looking for advise on how to add proper exception handling within the methods, and agreement on implementation from the maintainer (@dav3860).  Once this is done, I can refactor the ```checkAllPatterns()``` function, and all of the ```get*``` functions to which it dispatches to return a string, which is then sent to ```makeZabbix4Packet``` and ```sendZabbix4Packet```.
+
+# VmBix
 
 VmBix is a multi-threaded TCP proxy for the VMWare Sphere API written in Java. It accepts connections from a [Zabbix](http://www.zabbix.com/) server/proxy/agent or the zabbix_get binary and translates them to VMWare API calls.
 
